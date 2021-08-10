@@ -12,8 +12,8 @@
 
 #pragma once
 
-#include <memory>
 #include <algorithm>
+#include <memory>
 #include "common/logger.h"
 
 namespace bustub {
@@ -27,14 +27,6 @@ class Matrix {
   // TODO(P0): Add implementation
   Matrix(int r, int c) {
     // negtive
-    if(r < 0 || c < 0){
-
-    }
-    // overflow
-    if(r * c < r || r * c < c){
-
-    }
-
     rows = r;
     cols = c;
     int size = r * c;
@@ -67,9 +59,7 @@ class Matrix {
   virtual void MatImport(T *arr) = 0;
 
   // TODO(P0): Add implementation
-  virtual ~Matrix(){
-    delete this->linear;
-  };
+  virtual ~Matrix() { delete this->linear; }
 };
 
 template <typename T>
@@ -77,8 +67,8 @@ class RowMatrix : public Matrix<T> {
  public:
   // TODO(P0): Add implementation
   RowMatrix(int r, int c) : Matrix<T>(r, c) {
-    data_ = new T*[r];
-    for(int i = 0; i < r; i++){
+    data_ = new T *[r];
+    for (int i = 0; i < r; i++) {
       data_[i] = &(this->linear[i * c]);
     }
   }
@@ -98,15 +88,13 @@ class RowMatrix : public Matrix<T> {
   // TODO(P0): Add implementation
   void MatImport(T *arr) override {
     int size = this->rows * this->cols;
-    for(int i = 0; i < size; i++){
+    for (int i = 0; i < size; i++) {
       this->linear[i] = arr[i];
     }
   }
 
   // TODO(P0): Add implementation
-  ~RowMatrix() override{
-    delete this->data_;
-  };
+  ~RowMatrix() override { delete this->data_; };
 
  private:
   // 2D array containing the elements of the matrix in row-major format
@@ -124,16 +112,16 @@ class RowMatrixOperations {
   static std::unique_ptr<RowMatrix<T>> AddMatrices(std::unique_ptr<RowMatrix<T>> mat1,
                                                    std::unique_ptr<RowMatrix<T>> mat2) {
     int r1 = mat1->GetRows();
-    int r2 = mat2->GetRows(); 
-    int c1 = mat1->GetColumns(); 
+    int r2 = mat2->GetRows();
+    int c1 = mat1->GetColumns();
     int c2 = mat2->GetColumns();
 
-    if(r1 != c1 || r2 != c2){
+    if (r1 != c1 || r2 != c2) {
       return std::unique_ptr<RowMatrix<T>>(nullptr);
     }
     std::unique_ptr<RowMatrix<T>> mat(new RowMatrix<T>(r1, c1));
-    for(int i = 0; i < r1; i++){
-      for(int j = 0; j < c1; j++){
+    for (int i = 0; i < r1; i++) {
+      for (int j = 0; j < c1; j++) {
         mat->SetElem(i, j, mat1->GetElem(i, j) + mat2->GetElem(i, j));
       }
     }
@@ -148,15 +136,15 @@ class RowMatrixOperations {
     int r2 = mat2->GetRows();
     int c1 = mat1->GetColumns();
     int c2 = mat2->GetColumns();
-    if(r2 != c1){
+    if (r2 != c1) {
       return std::unique_ptr<RowMatrix<T>>(nullptr);
     }
 
     std::unique_ptr<RowMatrix<T>> mat(new RowMatrix<T>(r1, c2));
-    for(int i = 0; i < r1; i++){
-      for(int j = 0; j < c2; j++){
+    for (int i = 0; i < r1; i++) {
+      for (int j = 0; j < c2; j++) {
         T v = T();
-        for(int k = 0; k < r2; k++){
+        for (int k = 0; k < r2; k++) {
           v += mat1->GetElem(i, k) * mat2->GetElem(k, j);
         }
         mat->SetElem(i, j, v);
@@ -172,12 +160,12 @@ class RowMatrixOperations {
                                                     std::unique_ptr<RowMatrix<T>> matC) {
     int r1 = matA->GetRows();
     int r2 = matB->GetRows();
-    int r3 = matC->GetRows(); 
+    int r3 = matC->GetRows();
     int c1 = matA->GetColumns();
     int c2 = matB->GetColumns();
     int c3 = matC->Getcolumns();
 
-    if(r2 != c1 || r1 != r3 || c2 != c3){
+    if (r2 != c1 || r1 != r3 || c2 != c3) {
       return std::unique_ptr<RowMatrix<T>>(nullptr);
     }
 
