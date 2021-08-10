@@ -4,6 +4,9 @@ set(BUILD_SHARED_LIBS ON)
 set(CMAKE_CXX_STANDARD 17)              # Compile as C++17
 set(CMAKE_CXX_STANDARD_REQUIRED ON)     # Require C++17 support
 
+set(GIT_EXECUTABLE "/usr/bin/git")
+
+
 project(BusTub
         VERSION 2019.1
         DESCRIPTION "The BusTub Relational Database Management System (Educational) @ https://github.com/cmu-db/bustub"
