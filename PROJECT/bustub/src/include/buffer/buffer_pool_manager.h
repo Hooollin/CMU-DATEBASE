@@ -152,6 +152,8 @@ class BufferPoolManager {
    */
   void FlushAllPagesImpl();
 
+  bool HasFreePage();
+
   /** Number of pages in the buffer pool. */
   size_t pool_size_;
   /** Array of buffer pool pages. */
