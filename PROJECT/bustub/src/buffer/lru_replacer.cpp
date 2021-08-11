@@ -56,7 +56,7 @@ void LRUReplacer::Unpin(frame_id_t frame_id) {
     frame_id_node_[frame_id] = --frame_list_.end();
     this->victim_size_++;
   } else {
-    LOG_INFO("SOMETHING WENT WRONG HERE!");
+    LOG_INFO("frame_id is already maintained by lru_replacer, do nothing.");
   }
 }
 
