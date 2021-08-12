@@ -53,10 +53,7 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
       if(try_find_victim){// has victim frame
         Page *R = &this->pages_[target_frame_id];
         if(R->IsDirty()){
-          bool try_flush_R = this->FlushPageImpl(R->page_id_);
-          if(!try_flush_R){
-            return nullptr; // flush falied, return nullptr
-          }
+          disk_manager_->WritePage(R->page_id_, R->data_);
         }// victim page is not dirty, do nothing
         page_table_.erase(R->page_id_);
      }else return nullptr;  // no vimctim frame, should return nullptr
@@ -71,7 +68,6 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
     P->pin_count_ = 1;
     P->is_dirty_ = false;
     this->disk_manager_->ReadPage(P->page_id_, P->data_);
-    this->replacer_->Pin(target_frame_id);
   }else{// P exists
     target_frame_id = page_table_[page_id];
     P = &this->pages_[target_frame_id];
@@ -102,8 +98,9 @@ bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty) {
 }
 
 bool BufferPoolManager::FlushPageImpl(page_id_t page_id) {
-  // flush operation can only be called from a thread safe function
   // Make sure you call DiskManager::WritePage!
+  std::lock_guard<std::mutex> guard(latch_);
+
   if(page_id == INVALID_PAGE_ID || this->page_table_.find(page_id) == this->page_table_.end()){
     return false;
   }
@@ -112,7 +109,7 @@ bool BufferPoolManager::FlushPageImpl(page_id_t page_id) {
   if(P->is_dirty_){
     this->disk_manager_->WritePage(page_id, P->data_);
   }
-  this->pages_[target_frame_id].is_dirty_ = false;
+  P->is_dirty_ = false;
   return true;
 }
 
@@ -136,22 +133,21 @@ Page *BufferPoolManager::NewPageImpl(page_id_t *page_id) {
     }
   }
   P = &this->pages_[target_frame_id];
-
   if(P->is_dirty_){
-    this->FlushPageImpl(P->page_id_);
+    disk_manager_->WritePage(P->page_id_, P->data_);
   }
+
   // remove old mapping
   this->page_table_.erase(P->page_id_);
   P->ResetMemory();
 
   page_id_t new_page_id = this->disk_manager_->AllocatePage();
-
   P->page_id_ = new_page_id;
   P->pin_count_ = 1;
   P->is_dirty_ = false;
   this->page_table_[new_page_id] = target_frame_id;
-
   this->replacer_->Pin(target_frame_id);
+
   *page_id = new_page_id;
   return P;
 }
@@ -187,8 +183,10 @@ void BufferPoolManager::FlushAllPagesImpl() {
   for(auto &p : page_table_){
     page_id_t page_id = p.first;
     frame_id_t frame_id = p.second;
-    if(this->pages_[frame_id].is_dirty_){
-      this->FlushPageImpl(page_id);
+    Page *P = &this->pages_[frame_id];
+    if(P->is_dirty_){
+      this->disk_manager_->WritePage(page_id, P->data_);
+      P->is_dirty_ = false;
     }
   }
 }

@@ -141,5 +141,4 @@ TEST(BufferPoolManagerTest, SampleTest) {
   delete bpm;
   delete disk_manager;
 }
-
 }  // namespace bustub
