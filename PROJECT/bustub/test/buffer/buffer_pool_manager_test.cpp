@@ -141,4 +141,73 @@ TEST(BufferPoolManagerTest, SampleTest) {
   delete bpm;
   delete disk_manager;
 }
+
+TEST(BufferPoolManagerTest, DeletePageTest) {
+  const std::string db_name = "test.db";
+  const size_t buffer_pool_size = 10;
+
+  auto *disk_manager = new DiskManager(db_name);
+  auto *bpm = new BufferPoolManager(buffer_pool_size, disk_manager);
+
+  page_id_t page_id_temp;
+
+  // Scenario: We should be able to create new pages until we fill up the buffer pool.
+  for (size_t i = 0; i < buffer_pool_size; ++i) {
+    EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
+  }
+
+  // Scenario: we should not be able to delete all the pages created because they are still in use.
+  for (size_t i = 0; i < buffer_pool_size; ++i) {
+    EXPECT_EQ(false, bpm->DeletePage(i));
+  }
+
+  // Scenario: we should be able to delete all the pages after unpinning them.
+  for(size_t i = 0; i < buffer_pool_size; i++){
+    EXPECT_EQ(true, bpm->UnpinPage(i, true));
+  }
+
+  for(size_t i = 0; i < buffer_pool_size; i++){
+    EXPECT_EQ(true, bpm->DeletePage(i));
+  }
+
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+  remove("test.db");
+
+  delete bpm;
+  delete disk_manager;
+}
+
+TEST(BufferPoolManagerTest, FlushAllPageTest) {
+  const std::string db_name = "test.db";
+  const size_t buffer_pool_size = 10;
+
+  auto *disk_manager = new DiskManager(db_name);
+  auto *bpm = new BufferPoolManager(buffer_pool_size, disk_manager);
+
+  page_id_t page_id_temp;
+
+  // Scenario: We should be able to create new pages until we fill up the buffer pool.
+  for (size_t i = 0; i < buffer_pool_size; ++i) {
+    EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
+  }
+  Page *P = nullptr;
+  for(size_t i = 0; i < buffer_pool_size; i++){
+    P = bpm->FetchPage(i);
+    EXPECT_NE(P, nullptr);
+    snprintf(P->GetData(), PAGE_SIZE, "Hello");
+  }
+  bpm->FlushAllPages();
+
+  for(size_t i = 0; i < buffer_pool_size; i++){
+    EXPECT_EQ(false, bpm->FetchPage(i)->IsDirty());
+  }
+  // Shutdown the disk manager and remove the temporary file we created.
+  disk_manager->ShutDown();
+  remove("test.db");
+
+  delete bpm;
+  delete disk_manager;
+}
+
 }  // namespace bustub
