@@ -14,8 +14,8 @@
 #include <cstdio>
 #include <random>
 #include <string>
-#include "gtest/gtest.h"
 #include "common/logger.h"
+#include "gtest/gtest.h"
 
 namespace bustub {
 
@@ -162,11 +162,11 @@ TEST(BufferPoolManagerTest, DeletePageTest) {
   }
 
   // Scenario: we should be able to delete all the pages after unpinning them.
-  for(size_t i = 0; i < buffer_pool_size; i++){
+  for (size_t i = 0; i < buffer_pool_size; i++) {
     EXPECT_EQ(true, bpm->UnpinPage(i, true));
   }
 
-  for(size_t i = 0; i < buffer_pool_size; i++){
+  for (size_t i = 0; i < buffer_pool_size; i++) {
     EXPECT_EQ(true, bpm->DeletePage(i));
   }
 
@@ -192,14 +192,14 @@ TEST(BufferPoolManagerTest, FlushAllPageTest) {
     EXPECT_NE(nullptr, bpm->NewPage(&page_id_temp));
   }
   Page *P = nullptr;
-  for(size_t i = 0; i < buffer_pool_size; i++){
+  for (size_t i = 0; i < buffer_pool_size; i++) {
     P = bpm->FetchPage(i);
     EXPECT_NE(P, nullptr);
     snprintf(P->GetData(), PAGE_SIZE, "Hello");
   }
   bpm->FlushAllPages();
 
-  for(size_t i = 0; i < buffer_pool_size; i++){
+  for (size_t i = 0; i < buffer_pool_size; i++) {
     EXPECT_EQ(false, bpm->FetchPage(i)->IsDirty());
   }
   // Shutdown the disk manager and remove the temporary file we created.

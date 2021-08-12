@@ -47,17 +47,19 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
 
   Page *P = nullptr;
   frame_id_t target_frame_id = -1;
-  if(this->page_table_.find(page_id) == this->page_table_.end()){// P not exists
-    if(!HasFreePage()){// no free pages
+  if (this->page_table_.find(page_id) == this->page_table_.end()) {  // P not exists
+    if (!HasFreePage()) {                                            // no free pages
       bool try_find_victim = this->replacer_->Victim(&target_frame_id);
-      if(try_find_victim){// has victim frame
+      if (try_find_victim) {  // has victim frame
         Page *R = &this->pages_[target_frame_id];
-        if(R->IsDirty()){
+        if (R->IsDirty()) {
           disk_manager_->WritePage(R->page_id_, R->data_);
-        }// victim page is not dirty, do nothing
+        }  // victim page is not dirty, do nothing
         page_table_.erase(R->page_id_);
-     }else return nullptr;  // no vimctim frame, should return nullptr
-    }else{// has free pages
+      } else {
+        return nullptr;  // no vimctim frame, should return nullptr
+      }
+    } else {  // has free pages
       target_frame_id = this->free_list_.front();
       this->free_list_.pop_front();
     }
@@ -68,7 +70,7 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
     P->pin_count_ = 1;
     P->is_dirty_ = false;
     this->disk_manager_->ReadPage(P->page_id_, P->data_);
-  }else{// P exists
+  } else {  // P exists
     target_frame_id = page_table_[page_id];
     P = &this->pages_[target_frame_id];
     P->pin_count_++;
@@ -82,16 +84,16 @@ bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty) {
   std::lock_guard<std::mutex> guard(latch_);
 
   // unpin doens't mean remove it from buffer pool!!!
-  if(this->page_table_.find(page_id) == this->page_table_.end()){
+  if (this->page_table_.find(page_id) == this->page_table_.end()) {
     return false;
   }
-  Page* P = &this->pages_[this->page_table_[page_id]];
+  Page *P = &this->pages_[this->page_table_[page_id]];
   P->is_dirty_ |= is_dirty;
-  if(P->pin_count_ <= 0){
+  if (P->pin_count_ <= 0) {
     return false;
   }
   P->pin_count_--;
-  if(P->pin_count_ == 0){
+  if (P->pin_count_ == 0) {
     this->replacer_->Unpin(this->page_table_[page_id]);
   }
   return true;
@@ -101,12 +103,12 @@ bool BufferPoolManager::FlushPageImpl(page_id_t page_id) {
   // Make sure you call DiskManager::WritePage!
   std::lock_guard<std::mutex> guard(latch_);
 
-  if(page_id == INVALID_PAGE_ID || this->page_table_.find(page_id) == this->page_table_.end()){
+  if (page_id == INVALID_PAGE_ID || this->page_table_.find(page_id) == this->page_table_.end()) {
     return false;
   }
   frame_id_t target_frame_id = this->page_table_[page_id];
   Page *P = &this->pages_[target_frame_id];
-  if(P->is_dirty_){
+  if (P->is_dirty_) {
     this->disk_manager_->WritePage(page_id, P->data_);
   }
   P->is_dirty_ = false;
@@ -123,17 +125,17 @@ Page *BufferPoolManager::NewPageImpl(page_id_t *page_id) {
 
   Page *P = nullptr;
   frame_id_t target_frame_id = -1;
-  if(this->HasFreePage()){
+  if (this->HasFreePage()) {
     target_frame_id = this->free_list_.front();
     this->free_list_.pop_front();
-  }else{
+  } else {
     bool try_find_victim = this->replacer_->Victim(&target_frame_id);
-    if(!try_find_victim){
-      return nullptr;// no victim can be found, return nullptr
+    if (!try_find_victim) {
+      return nullptr;  // no victim can be found, return nullptr
     }
   }
   P = &this->pages_[target_frame_id];
-  if(P->is_dirty_){
+  if (P->is_dirty_) {
     disk_manager_->WritePage(P->page_id_, P->data_);
   }
 
@@ -160,13 +162,13 @@ bool BufferPoolManager::DeletePageImpl(page_id_t page_id) {
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
   std::lock_guard<std::mutex> guard(latch_);
 
-  if(this->page_table_.find(page_id) == this->page_table_.end()){
+  if (this->page_table_.find(page_id) == this->page_table_.end()) {
     return true;
-  }else{
+  } else {
     Page *P = &this->pages_[this->page_table_[page_id]];
-    if(P->GetPinCount() > 0){
+    if (P->GetPinCount() > 0) {
       return false;
-    }else{
+    } else {
       this->disk_manager_->DeallocatePage(page_id);
       P->ResetMemory();
       this->free_list_.push_back(page_table_[page_id]);
@@ -179,20 +181,18 @@ bool BufferPoolManager::DeletePageImpl(page_id_t page_id) {
 
 void BufferPoolManager::FlushAllPagesImpl() {
   std::lock_guard<std::mutex> guard(latch_);
-  
-  for(auto &p : page_table_){
+
+  for (auto &p : page_table_) {
     page_id_t page_id = p.first;
     frame_id_t frame_id = p.second;
     Page *P = &this->pages_[frame_id];
-    if(P->is_dirty_){
+    if (P->is_dirty_) {
       this->disk_manager_->WritePage(page_id, P->data_);
       P->is_dirty_ = false;
     }
   }
 }
 
-bool BufferPoolManager::HasFreePage(){
-  return static_cast<int>(this->free_list_.size()) > 0;
-}
+bool BufferPoolManager::HasFreePage() { return static_cast<int>(this->free_list_.size()) > 0; }
 
 }  // namespace bustub
