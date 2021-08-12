@@ -64,6 +64,7 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
       target_frame_id = this->free_list_.front();
       this->free_list_.pop_front();
     }
+    // once we find spare or substitute frame, fetch the page from disk and update frame's metadata
     this->page_table_[page_id] = target_frame_id;
     P = &this->pages_[target_frame_id];
     P->page_id_ = page_id;
@@ -75,14 +76,16 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
     target_frame_id = page_table_[page_id];
     P = &this->pages_[target_frame_id];
     P->pin_count_++;
-    this->replacer_->Pin(target_frame_id);
   }
+  // this frame is certainly in use
+  this->replacer_->Pin(target_frame_id);
   return P;
 }
 
 bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty) {
   std::lock_guard<std::mutex> guard(latch_);
 
+  // unpin doens't mean remove it from buffer pool!!!
   if(this->page_table_.find(page_id) == this->page_table_.end()){
     return false;
   }
@@ -99,6 +102,7 @@ bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty) {
 }
 
 bool BufferPoolManager::FlushPageImpl(page_id_t page_id) {
+  // flush operation can only be called from a thread safe function
   // Make sure you call DiskManager::WritePage!
   if(page_id == INVALID_PAGE_ID || this->page_table_.find(page_id) == this->page_table_.end()){
     return false;
@@ -136,6 +140,7 @@ Page *BufferPoolManager::NewPageImpl(page_id_t *page_id) {
   if(P->is_dirty_){
     this->FlushPageImpl(P->page_id_);
   }
+  // remove old mapping
   this->page_table_.erase(P->page_id_);
   P->ResetMemory();
 
@@ -144,9 +149,9 @@ Page *BufferPoolManager::NewPageImpl(page_id_t *page_id) {
   P->page_id_ = new_page_id;
   P->pin_count_ = 1;
   P->is_dirty_ = false;
-  this->replacer_->Pin(target_frame_id);
   this->page_table_[new_page_id] = target_frame_id;
 
+  this->replacer_->Pin(target_frame_id);
   *page_id = new_page_id;
   return P;
 }
@@ -169,6 +174,8 @@ bool BufferPoolManager::DeletePageImpl(page_id_t page_id) {
       this->disk_manager_->DeallocatePage(page_id);
       P->ResetMemory();
       this->free_list_.push_back(page_table_[page_id]);
+      // remove the mapping from page_table
+      this->page_table_.erase(page_id);
     }
   }
   return true;
