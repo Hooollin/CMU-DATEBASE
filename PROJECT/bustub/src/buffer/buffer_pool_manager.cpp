@@ -64,18 +64,17 @@ Page *BufferPoolManager::FetchPageImpl(page_id_t page_id) {
       target_frame_id = this->free_list_.front();
       this->free_list_.pop_front();
     }
-
     this->page_table_[page_id] = target_frame_id;
     P = &this->pages_[target_frame_id];
-
     P->page_id_ = page_id;
     P->pin_count_ = 1;
     P->is_dirty_ = false;
     this->disk_manager_->ReadPage(P->page_id_, P->data_);
+    this->replacer_->Pin(target_frame_id);
   }else{// P exists
     target_frame_id = page_table_[page_id];
-    P->pin_count_++;
     P = &this->pages_[target_frame_id];
+    P->pin_count_++;
     this->replacer_->Pin(target_frame_id);
   }
   return P;
@@ -101,19 +100,15 @@ bool BufferPoolManager::UnpinPageImpl(page_id_t page_id, bool is_dirty) {
 
 bool BufferPoolManager::FlushPageImpl(page_id_t page_id) {
   // Make sure you call DiskManager::WritePage!
-  std::lock_guard<std::mutex> guard(latch_);
-
-  if(page_id == INVALID_PAGE_ID){
+  if(page_id == INVALID_PAGE_ID || this->page_table_.find(page_id) == this->page_table_.end()){
     return false;
   }
-  if(page_table_.find(page_id) == page_table_.end()){
-    return false;
-  }
-  Page *P = &this->pages_[page_table_[page_id]];
+  frame_id_t target_frame_id = this->page_table_[page_id];
+  Page *P = &this->pages_[target_frame_id];
   if(P->is_dirty_){
     this->disk_manager_->WritePage(page_id, P->data_);
   }
-  this->pages_[this->page_table_[page_id]].is_dirty_ = false;
+  this->pages_[target_frame_id].is_dirty_ = false;
   return true;
 }
 
@@ -141,7 +136,7 @@ Page *BufferPoolManager::NewPageImpl(page_id_t *page_id) {
   if(P->is_dirty_){
     this->FlushPageImpl(P->page_id_);
   }
-
+  this->page_table_.erase(P->page_id_);
   P->ResetMemory();
 
   page_id_t new_page_id = this->disk_manager_->AllocatePage();
@@ -149,6 +144,7 @@ Page *BufferPoolManager::NewPageImpl(page_id_t *page_id) {
   P->page_id_ = new_page_id;
   P->pin_count_ = 1;
   P->is_dirty_ = false;
+  this->replacer_->Pin(target_frame_id);
   this->page_table_[new_page_id] = target_frame_id;
 
   *page_id = new_page_id;
@@ -175,7 +171,7 @@ bool BufferPoolManager::DeletePageImpl(page_id_t page_id) {
       this->free_list_.push_back(page_table_[page_id]);
     }
   }
-  return false;
+  return true;
 }
 
 void BufferPoolManager::FlushAllPagesImpl() {
