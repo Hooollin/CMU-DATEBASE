@@ -138,7 +138,15 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient
  * So I need to 'adopt' them by changing their parent page id, which needs to be persisted with BufferPoolManger
  */
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager) {}
+void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager) {
+  for(int i = 0; i < size; i++){
+    ValueType page_id = (item + i)->second;
+    this->array[this->size_] = *(items + i);
+    this->size_++;
+    (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->page_id_);
+    buffer_pool_manager->flushPage(page_id);
+  }
+}
 
 /*****************************************************************************
  * REMOVE
@@ -203,10 +211,10 @@ INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyLastFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager) {
   KeyType key = pair.first;
   ValueType page_id = pair.second;
-  this->array[this->GetSize()] = pair;
-  this->increaseSize();
+  this->array[this->size_] = pair;
+  this->size++;
 
-  (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->GetPageId());
+  (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->page_id_);
   buffer_pool_manager->flushPage(page_id);
 }
 
@@ -231,15 +239,15 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyFirstFrom(const MappingType &pair, Buff
   KeyType key = pair.first;
   ValueType page_id = pair.second;
 
-  this->SetKeyAt(0, key);
-  for(int i = this->GetSize(); i > 1; i--){
+  this->array[0].first = key;
+  for(int i = this->size_; i >= 1; i--){
     this->array[i] = this->array[i - 1];
   }
   this->array[0] = pair;
   this->array[0].first = -1;
-  this->IncreaseSize();
+  this->size_++;
 
-  (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->GetPageId());
+  (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->page_id_);
   buffer_pool_manager->flushPage(page_id);
 }
 
