@@ -201,6 +201,13 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeInternalPage *rec
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyLastFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager) {
+  KeyType key = pair.first;
+  ValueType page_id = pair.second;
+  this->array[this->GetSize()] = pair;
+  this->increaseSize();
+
+  (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->GetPageId());
+  buffer_pool_manager->flushPage(page_id);
 }
 
 /*
