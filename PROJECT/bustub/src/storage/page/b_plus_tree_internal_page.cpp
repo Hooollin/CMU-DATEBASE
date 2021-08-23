@@ -131,10 +131,6 @@ int B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value, 
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient,
                                                 BufferPoolManager *buffer_pool_manager) {
-  int this_size = this->getSize(), reci_size = recipient->GetSize();
-  for(int i = this_size / 2; i < this->GetSize(); i++){
-    recipient->SetKeyAt(reci_size, this->KeyAt(i));
-  }
 }
 
 /* Copy entries into me, starting from {items} and copy {size} entries.
@@ -226,6 +222,18 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeInternalPage *re
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyFirstFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager) {
+  KeyType key = pair.first;
+  ValueType page_id = pair.second;
+
+  this->SetKeyAt(0, key);
+  for(int i = this->GetSize(); i > 1; i--){
+    this->array[i] = this->array[i - 1];
+  }
+  this->array[0] = pair;
+  this->array[0].first = -1;
+
+  (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->GetPageId());
+  buffer_pool_manager->flushPage(page_id);
 }
 
 // valuetype for internalNode should be page id_t
