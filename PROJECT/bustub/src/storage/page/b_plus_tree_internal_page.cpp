@@ -114,12 +114,12 @@ INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value, const KeyType &new_key,
                                                     const ValueType &new_value) {
   int pos = this->ValueAt(old_value);
-  for(int i = this->getSize(); i > pos; i--){
+  for(int i = this->GetSize(); i > pos; i--){
     this->array[i] = this->array[i - 1];
   }
   this->array[pos + 1] = {new_key, new_value};
-  this->IncreaseSize();
-  return this->getSize();
+  this->IncreaseSize(1);
+  return this->GetSize();
 }
 
 /*****************************************************************************
@@ -140,11 +140,12 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, BufferPoolManager *buffer_pool_manager) {
   for(int i = 0; i < size; i++){
-    ValueType page_id = (item + i)->second;
-    this->array[this->size_] = *(items + i);
-    this->size_++;
-    (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->page_id_);
-    buffer_pool_manager->flushPage(page_id);
+    ValueType page_id = (items + i)->second;
+    this->array[this->GetSize()] = *(items + i);
+    this->IncreaseSize(1);
+
+    reinterpret_cast<BPlusTreeInternalPage*>(buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->GetPageId());
+    buffer_pool_manager->FlushPage(page_id);
   }
 }
 
@@ -158,10 +159,10 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyNFrom(MappingType *items, int size, Buf
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Remove(int index) {
-  for(int i = index; i < this->getSize() - 1; i++){
+  for(int i = index; i < this->GetSize() - 1; i++){
     this->array[i] = this->array[i + 1];
   }
-  this->setSize(this->getSize() - 1);
+  this->IncreaseSize(-1);
 }
 
 /*
@@ -171,7 +172,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::Remove(int index) {
 INDEX_TEMPLATE_ARGUMENTS
 ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveAndReturnOnlyChild() {
   ValueType rev = this->array[0].second;
-  this->setSize(0);
+  this->IncreaseSize(-1);
   return rev;
 }
 /*****************************************************************************
@@ -209,13 +210,11 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeInternalPage *rec
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyLastFrom(const MappingType &pair, BufferPoolManager *buffer_pool_manager) {
-  KeyType key = pair.first;
   ValueType page_id = pair.second;
-  this->array[this->size_] = pair;
-  this->size++;
-
-  (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->page_id_);
-  buffer_pool_manager->flushPage(page_id);
+  this->array[this->GetSize()] = pair;
+  this->IncreaseSize(1);
+  reinterpret_cast<BPlusTreeInternalPage*>(buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->GetPageId());
+  buffer_pool_manager->FlushPage(page_id);
 }
 
 /*
@@ -240,15 +239,14 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyFirstFrom(const MappingType &pair, Buff
   ValueType page_id = pair.second;
 
   this->array[0].first = key;
-  for(int i = this->size_; i >= 1; i--){
+  for(int i = this->GetSize(); i >= 1; i--){
     this->array[i] = this->array[i - 1];
   }
   this->array[0] = pair;
-  this->array[0].first = -1;
-  this->size_++;
+  this->IncreaseSize(1);
 
-  (reinterpret_cast<B_PLUS_TREE_INTERNAL_PAGE_TYPE*>buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->page_id_);
-  buffer_pool_manager->flushPage(page_id);
+  reinterpret_cast<BPlusTreeInternalPage*>(buffer_pool_manager->FetchPage(page_id))->SetParentPageId(this->GetPageId());
+  buffer_pool_manager->FlushPage(page_id);
 }
 
 // valuetype for internalNode should be page id_t
