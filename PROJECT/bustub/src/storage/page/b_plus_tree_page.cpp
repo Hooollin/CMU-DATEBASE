@@ -19,7 +19,9 @@ namespace bustub {
  */
 bool BPlusTreePage::IsLeafPage() const { return this->page_type_ == IndexPageType::LEAF_PAGE; }
 bool BPlusTreePage::IsRootPage() const { return this->page_type_ == IndexPageType::INTERNAL_PAGE; }
-void BPlusTreePage::SetPageType(IndexPageType page_type) {}
+void BPlusTreePage::SetPageType(IndexPageType page_type) {
+  this->page_type_ = page_type;
+}
 
 /*
  * Helper methods to get/set size (number of key/value pairs stored in that
@@ -56,6 +58,6 @@ void BPlusTreePage::SetPageId(page_id_t page_id) { this->page_id_ = page_id; }
 /*
  * Helper methods to set lsn
  */
-void BPlusTreePage::SetLSN(lsn_t lsn) { lsn_ = lsn; }
+void BPlusTreePage::SetLSN(lsn_t lsn) { this->lsn_ = lsn; }
 
 }  // namespace bustub
