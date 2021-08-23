@@ -132,6 +132,8 @@ int B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value, 
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient,
                                                 BufferPoolManager *buffer_pool_manager) {
+  int k = this->GetSize() / 2;
+  recipient->CopyNFrom(&this->array[k], this->GetSize() - k, buffer_pool_manager);
 }
 
 /* Copy entries into me, starting from {items} and copy {size} entries.
@@ -188,7 +190,12 @@ ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::RemoveAndReturnOnlyChild() {
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveAllTo(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
-                                               BufferPoolManager *buffer_pool_manager) {}
+                                               BufferPoolManager *buffer_pool_manager) {
+  for(int i = 0; i < this->GetSize(); i++){
+    recipient->CopyLastFrom(this->array[i], buffer_pool_manager);
+  }
+  this->SetSize(0);
+}
 
 /*****************************************************************************
  * REDISTRIBUTE
@@ -203,7 +210,13 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveAllTo(BPlusTreeInternalPage *recipient,
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
-                                                      BufferPoolManager *buffer_pool_manager) {}
+                                                      BufferPoolManager *buffer_pool_manager) {
+  recipient->CopyLastFrom(this->array[0], buffer_pool_manager);
+  for(int i = 0; i < this->GetSize() - 1; i++){
+    this->array[i + 1] = this->array[i];
+  }
+  this->IncreaseSize(-1);
+}
 
 /* Append an entry at the end.
  * Since it is an internal page, the moved entry(page)'s parent needs to be updated.
@@ -228,6 +241,8 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::CopyLastFrom(const MappingType &pair, Buffe
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeInternalPage *recipient, const KeyType &middle_key,
                                                        BufferPoolManager *buffer_pool_manager) {
+  recipient->CopyFirstFrom(this->array[this->GetSize() - 1], buffer_pool_manager);
+  this->IncreaseSize(-1);
 }
 
 /* Append an entry at the beginning.

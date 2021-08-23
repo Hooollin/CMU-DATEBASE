@@ -107,7 +107,7 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &valu
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfTo(BPlusTreeLeafPage *recipient) {
-  int k = this->GetSize() / 2
+  int k = this->GetSize() / 2;
   recipient->CopyNFrom(&this->array[k], this->GetSize() - k);
 }
 
@@ -209,7 +209,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeLeafPage *recipient) 
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::CopyLastFrom(const MappingType &item) {
-  this->array[this->getSize()] = item;
+  this->array[this->GetSize()] = item;
   this->IncreaseSize(1);
 }
 
