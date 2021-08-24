@@ -67,7 +67,6 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key, const KeyComparator
  */
 INDEX_TEMPLATE_ARGUMENTS
 KeyType B_PLUS_TREE_LEAF_PAGE_TYPE::KeyAt(int index) const {
-  // replace with your own code
   return this->array[index].first;
 }
 
@@ -108,7 +107,7 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &valu
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfTo(BPlusTreeLeafPage *recipient) {
   int k = this->GetSize() / 2;
-  recipient->CopyNFrom(&this->array[k], this->GetSize() - k);
+  recipient->CopyNFrom(this->array + this->GetSize() - k, k);
 }
 
 /*
