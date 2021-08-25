@@ -31,7 +31,7 @@ BPLUSTREE_TYPE::BPlusTree(std::string name, BufferPoolManager *buffer_pool_manag
  * Helper function to decide whether current b+tree is empty
  */
 INDEX_TEMPLATE_ARGUMENTS
-bool BPLUSTREE_TYPE::IsEmpty() const {this->root_page_id_ == INVALID_PAGE_ID;}
+bool BPLUSTREE_TYPE::IsEmpty() const { return this->root_page_id_ == INVALID_PAGE_ID; }
 /*****************************************************************************
  * SEARCH
  *****************************************************************************/
@@ -44,15 +44,16 @@ INDEX_TEMPLATE_ARGUMENTS
 bool BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) {
   page_id_t page_id = this->root_page_id_;
   while(page_id != INVALID_PAGE_ID){
-    BPlusTreePage* curr_page = reinterpret_cast<BPlusTreePage*>(buffer_pool_manager_->FetchPage(page_id));
-    if(curr_page->IsLeafPage()){
+    Page* curr_page = reinterpret_cast<Page*>(buffer_pool_manager_->FetchPage(page_id)->GetData());
+    BPlusTreePage* tree_page = reinterpret_cast<BPlusTreePage*>(curr_page);
+    if(tree_page->IsLeafPage()){
       ValueType value;
-      if(reinterpret_cast<BPlusTreeLeafPage*>(curr_page)->LookUp(key, &value, this->comparator_)){
+      if(reinterpret_cast<LeafPage*>(tree_page)->Lookup(key, &value, this->comparator_)){
         result->push_back(value);
         return true;
       }else break;
     }else{
-      page_id = reinterpret_cast<BPlusTreeInternalPage*>(curr_page)->LookUp(key, this->comparator_);
+      page_id = reinterpret_cast<InternalPage*>(tree_page)->Lookup(key, this->comparator_);
     }
   }
   return false;
@@ -69,7 +70,14 @@ bool BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
  * keys return false, otherwise return true.
  */
 INDEX_TEMPLATE_ARGUMENTS
-bool BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) { return false; }
+bool BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) {
+  if(this->IsEmpty()){
+    this->StartNewTree(key, value);
+    return true;
+  }else{
+    return this->InsertIntoLeaf(key, value, transaction);
+  }
+}
 /*
  * Insert constant key & value pair into an empty tree
  * User needs to first ask for new page from buffer pool manager(NOTICE: throw
@@ -77,7 +85,16 @@ bool BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transact
  * tree's root page id and insert entry directly into leaf page.
  */
 INDEX_TEMPLATE_ARGUMENTS
-void BPLUSTREE_TYPE::StartNewTree(const KeyType &key, const ValueType &value) {}
+void BPLUSTREE_TYPE::StartNewTree(const KeyType &key, const ValueType &value) {
+  Page* root_page = this->buffer_pool_manager_->NewPage(&this->root_page_id_);
+  if(root_page == nullptr){
+    throw new Exception("out of memory!");
+  }
+
+  LeafPage* page = reinterpret_cast<LeafPage*>(root_page->GetData());
+  page->Init(this->root_page_id_, INVALID_PAGE_ID, this->leaf_max_size_);
+  page->Insert(key, value, this->comparator_);
+}
 
 /*
  * Insert constant key & value pair into leaf page
@@ -89,6 +106,24 @@ void BPLUSTREE_TYPE::StartNewTree(const KeyType &key, const ValueType &value) {}
  */
 INDEX_TEMPLATE_ARGUMENTS
 bool BPLUSTREE_TYPE::InsertIntoLeaf(const KeyType &key, const ValueType &value, Transaction *transaction) {
+  page_id_t curr_page_id = this->root_page_id_;
+  while(curr_page_id != INVALID_PAGE_ID){
+    Page* curr_page = buffer_pool_manager_->FetchPage(curr_page_id);
+    BPlusTreePage* tree_page = reinterpret_cast<BPlusTreePage*>(curr_page->GetData());
+    if(tree_page->IsLeafPage()){
+      LeafPage* leaf_page = reinterpret_cast<LeafPage*>(tree_page);
+      ValueType val;
+      // key already exists
+      if(leaf_page->Lookup(key, &val, this->comparator_)){
+        return false;
+      }
+      leaf_page->Insert(key, value, this->comparator_);
+      return true;
+    }else{
+      InternalPage* internal_page = reinterpret_cast<InternalPage*>(tree_page);
+      curr_page_id = internal_page->Lookup(key, this->comparator_);
+    }
+  }
   return false;
 }
 
