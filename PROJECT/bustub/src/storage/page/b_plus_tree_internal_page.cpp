@@ -59,6 +59,7 @@ int B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueIndex(const ValueType &value) const {
     if(this->ValueAt(idx) == value){
       return idx;
     }
+    idx++;
   }
   return this->GetSize();
 }
@@ -84,11 +85,11 @@ ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::Lookup(const KeyType &key, const KeyCo
   while(l < r){
     int mid = (l + r) / 2;
     int cmp_result = comparator(key, this->KeyAt(mid));
-    if(cmp_result > 0){
+    if(cmp_result < 0){
       r = mid;
     }else l = mid + 1;
   }
-  return l;
+  return this->ValueAt(l);
 }
 
 /*****************************************************************************
@@ -116,7 +117,7 @@ void B_PLUS_TREE_INTERNAL_PAGE_TYPE::PopulateNewRoot(const ValueType &old_value,
 INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value, const KeyType &new_key,
                                                     const ValueType &new_value) {
-  int pos = this->ValueAt(old_value);
+  int pos = this->ValueIndex(old_value);
   for(int i = this->GetSize(); i > pos; i--){
     this->array[i] = this->array[i - 1];
   }

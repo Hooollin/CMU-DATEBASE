@@ -95,7 +95,7 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &valu
   }
   this->array[i] = {key, value};
   this->IncreaseSize(1);
-  return 0;
+  return this->GetSize();
 }
 
 /*****************************************************************************
@@ -108,6 +108,7 @@ INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfTo(BPlusTreeLeafPage *recipient) {
   int k = this->GetSize() / 2;
   recipient->CopyNFrom(this->array + this->GetSize() - k, k);
+  this->SetSize(this->GetSize() - k);
 }
 
 /*
@@ -131,16 +132,16 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::CopyNFrom(MappingType *items, int size) {
 INDEX_TEMPLATE_ARGUMENTS
 bool B_PLUS_TREE_LEAF_PAGE_TYPE::Lookup(const KeyType &key, ValueType *value, const KeyComparator &comparator) const {
   int l = 0, r = this->GetSize() - 1;
-  while(l < r){
+  while(l <= r){
     int mid = (l + r) / 2;
     int cmp = comparator(key, this->array[mid].first);
     if(cmp == 0){
       *value = this->array[mid].second;
       return true;
     }else if(cmp < 0){
-      l = mid + 1;
+      r = mid - 1;
     }else{
-      r = mid; 
+      l = mid + 1;
     }
   }
   return false;
