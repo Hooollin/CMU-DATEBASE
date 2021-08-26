@@ -43,7 +43,7 @@ INDEX_TEMPLATE_ARGUMENTS
 page_id_t B_PLUS_TREE_LEAF_PAGE_TYPE::GetNextPageId() const { return this->next_page_id_; }
 
 INDEX_TEMPLATE_ARGUMENTS
-void B_PLUS_TREE_LEAF_PAGE_TYPE::SetNextPageId(page_id_t next_page_id) {this->next_page_id_ = next_page_id;}
+void B_PLUS_TREE_LEAF_PAGE_TYPE::SetNextPageId(page_id_t next_page_id) { this->next_page_id_ = next_page_id; }
 
 /**
  * Helper method to find the first index i so that array[i].first >= key
@@ -52,11 +52,13 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::SetNextPageId(page_id_t next_page_id) {this->ne
 INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key, const KeyComparator &comparator) const {
   int l = 0, r = this->GetSize() - 1;
-  while(l < r){
+  while (l < r) {
     int mid = (l + r) / 2;
-    if(comparator(key, this->array[mid].first) < 0){
+    if (comparator(key, this->array[mid].first) < 0) {
       l = mid + 1;
-    }else r = mid;
+    } else {
+      r = mid;
+    }
   }
   return l;
 }
@@ -66,18 +68,14 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key, const KeyComparator
  * array offset)
  */
 INDEX_TEMPLATE_ARGUMENTS
-KeyType B_PLUS_TREE_LEAF_PAGE_TYPE::KeyAt(int index) const {
-  return this->array[index].first;
-}
+KeyType B_PLUS_TREE_LEAF_PAGE_TYPE::KeyAt(int index) const { return this->array[index].first; }
 
 /*
  * Helper method to find and return the key & value pair associated with input
  * "index"(a.k.a array offset)
  */
 INDEX_TEMPLATE_ARGUMENTS
-const MappingType &B_PLUS_TREE_LEAF_PAGE_TYPE::GetItem(int index) {
-  return array[index];
-}
+const MappingType &B_PLUS_TREE_LEAF_PAGE_TYPE::GetItem(int index) { return array[index]; }
 
 /*****************************************************************************
  * INSERTION
@@ -89,7 +87,7 @@ const MappingType &B_PLUS_TREE_LEAF_PAGE_TYPE::GetItem(int index) {
 INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &value, const KeyComparator &comparator) {
   int i = this->GetSize();
-  while(i > 0 && comparator(key, this->array[i - 1].first) < 0){
+  while (i > 0 && comparator(key, this->array[i - 1].first) < 0) {
     this->array[i] = this->array[i - 1];
     i--;
   }
@@ -116,7 +114,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfTo(BPlusTreeLeafPage *recipient) {
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::CopyNFrom(MappingType *items, int size) {
-  for(int i = 0; i < size; i++){
+  for (int i = 0; i < size; i++) {
     this->CopyLastFrom(*(items + i));
   }
 }
@@ -132,15 +130,15 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::CopyNFrom(MappingType *items, int size) {
 INDEX_TEMPLATE_ARGUMENTS
 bool B_PLUS_TREE_LEAF_PAGE_TYPE::Lookup(const KeyType &key, ValueType *value, const KeyComparator &comparator) const {
   int l = 0, r = this->GetSize() - 1;
-  while(l <= r){
+  while (l <= r) {
     int mid = (l + r) / 2;
     int cmp = comparator(key, this->array[mid].first);
-    if(cmp == 0){
+    if (cmp == 0) {
       *value = this->array[mid].second;
       return true;
-    }else if(cmp < 0){
+    } else if (cmp < 0) {
       r = mid - 1;
-    }else{
+    } else {
       l = mid + 1;
     }
   }
@@ -159,15 +157,15 @@ bool B_PLUS_TREE_LEAF_PAGE_TYPE::Lookup(const KeyType &key, ValueType *value, co
 INDEX_TEMPLATE_ARGUMENTS
 int B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveAndDeleteRecord(const KeyType &key, const KeyComparator &comparator) {
   int i = 0;
-  while(i < this->GetSize()){
-    if(comparator(key, this->array[i].first) == 0){
+  while (i < this->GetSize()) {
+    if (comparator(key, this->array[i].first) == 0) {
       break;
     }
   }
-  if(i == this->GetSize()){
+  if (i == this->GetSize()) {
     return this->GetSize();
   }
-  while(i < this->GetSize() - 1){
+  while (i < this->GetSize() - 1) {
     this->array[i] = this->array[i + 1];
   }
   this->IncreaseSize(-1);
@@ -183,7 +181,7 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveAndDeleteRecord(const KeyType &key, const 
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveAllTo(BPlusTreeLeafPage *recipient) {
-  for(int i = 0; i < this->GetSize(); i++){
+  for (int i = 0; i < this->GetSize(); i++) {
     recipient->CopyLastFrom(this->array[i]);
   }
   recipient->SetNextPageId(this->GetNextPageId());
@@ -198,7 +196,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveAllTo(BPlusTreeLeafPage *recipient) {
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveFirstToEndOf(BPlusTreeLeafPage *recipient) {
   recipient->CopyLastFrom(this->array[0]);
-  for(int i = 0; i < this->GetSize() - 1; i++){
+  for (int i = 0; i < this->GetSize() - 1; i++) {
     this->array[i] = this->array[i + 1];
   }
   this->IncreaseSize(-1);
@@ -227,7 +225,7 @@ void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveLastToFrontOf(BPlusTreeLeafPage *recipient)
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::CopyFirstFrom(const MappingType &item) {
-  for(int i = this->GetSize(); i >= 1; i--){
+  for (int i = this->GetSize(); i >= 1; i--) {
     this->array[i] = this->array[i - 1];
   }
   this->array[0] = item;
