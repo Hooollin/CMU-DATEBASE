@@ -44,8 +44,8 @@ INDEX_TEMPLATE_ARGUMENTS
 bool BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) {
   page_id_t page_id = this->root_page_id_;
   while (page_id != INVALID_PAGE_ID) {
-    Page *curr_page = reinterpret_cast<Page *>(buffer_pool_manager_->FetchPage(page_id)->GetData());
-    BPlusTreePage *tree_page = reinterpret_cast<BPlusTreePage *>(curr_page);
+    std::cout << page_id << std::endl;
+    BPlusTreePage *tree_page = reinterpret_cast<BPlusTreePage *>(this->buffer_pool_manager_->FetchPage(page_id)->GetData());
     if (tree_page->IsLeafPage()) {
       ValueType value;
       if (reinterpret_cast<LeafPage *>(tree_page)->Lookup(key, &value, this->comparator_)) {
@@ -121,7 +121,7 @@ bool BPLUSTREE_TYPE::InsertIntoLeaf(const KeyType &key, const ValueType &value, 
       }
       int size = leaf_page_ptr->Insert(key, value, this->comparator_);
       // overflow
-      if (size == leaf_page_ptr->GetMaxSize()) {
+      if (size > leaf_page_ptr->GetMaxSize()) {
         BPlusTreePage *new_leaf_page_ptr = Split(curr_page_ptr);
         this->InsertIntoParent(curr_page_ptr, reinterpret_cast<LeafPage *>(new_leaf_page_ptr)->KeyAt(0),
                                new_leaf_page_ptr, transaction);
@@ -179,9 +179,8 @@ N *BPLUSTREE_TYPE::Split(N *node) {
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::InsertIntoParent(BPlusTreePage *old_node, const KeyType &key, BPlusTreePage *new_node,
                                       Transaction *transaction) {
-  // 如果当前old_node是root page
+  // 如果old_node是root page
   if (old_node->GetPageId() == this->root_page_id_) {
-    std::cout << old_node->GetPageId() << " " << key << new_node->GetPageId() << std::endl;
     page_id_t new_root_page_id;
     Page *new_root_page = this->buffer_pool_manager_->NewPage(&new_root_page_id);
     if (new_root_page == nullptr) {
@@ -201,9 +200,9 @@ void BPLUSTREE_TYPE::InsertIntoParent(BPlusTreePage *old_node, const KeyType &ke
       reinterpret_cast<BPlusTreePage *>(this->buffer_pool_manager_->FetchPage(parent_id)->GetData());
   int size =
       reinterpret_cast<InternalPage *>(parent_page)->InsertNodeAfter(old_node->GetPageId(), key, new_node->GetPageId());
-  if (size == parent_page->GetMaxSize()) {
+  if (size > parent_page->GetMaxSize()) {
     BPlusTreePage *new_split_page = this->Split(parent_page);
-    this->InsertIntoParent(parent_page, reinterpret_cast<InternalPage *>(new_split_page)->KeyAt(1), new_split_page);
+    this->InsertIntoParent(parent_page, reinterpret_cast<InternalPage *>(new_split_page)->KeyAt(0), new_split_page, transaction);
   }
 }
 

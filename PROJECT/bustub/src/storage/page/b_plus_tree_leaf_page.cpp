@@ -104,7 +104,7 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::Insert(const KeyType &key, const ValueType &valu
  */
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_LEAF_PAGE_TYPE::MoveHalfTo(BPlusTreeLeafPage *recipient) {
-  int k = this->GetSize() / 2;
+  int k = (this->GetSize() + 1) / 2;
   recipient->CopyNFrom(this->array + this->GetSize() - k, k);
   this->SetSize(this->GetSize() - k);
 }

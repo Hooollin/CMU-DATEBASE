@@ -79,17 +79,19 @@ ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const { return this
  */
 INDEX_TEMPLATE_ARGUMENTS
 ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::Lookup(const KeyType &key, const KeyComparator &comparator) const {
-  int l = 1, r = this->GetSize() - 1;
-  while (l < r) {
-    int mid = (l + r) / 2;
-    int cmp_result = comparator(key, this->KeyAt(mid));
-    if (cmp_result < 0) {
-      r = mid;
-    } else {
-      l = mid + 1;
+  if(this->GetSize() == 1){
+    return this->ValueAt(0);
+  }
+  int ans = this->GetSize() - 1;
+  while(ans > 0){
+    int cmp_result = comparator(key, this->KeyAt(ans));
+    if(cmp_result < 0){
+      ans--;
+    }else{
+      break;
     }
   }
-  return this->ValueAt(l);
+  return this->ValueAt(ans);
 }
 
 /*****************************************************************************
@@ -135,7 +137,7 @@ int B_PLUS_TREE_INTERNAL_PAGE_TYPE::InsertNodeAfter(const ValueType &old_value, 
 INDEX_TEMPLATE_ARGUMENTS
 void B_PLUS_TREE_INTERNAL_PAGE_TYPE::MoveHalfTo(BPlusTreeInternalPage *recipient,
                                                 BufferPoolManager *buffer_pool_manager) {
-  int k = this->GetSize() / 2;
+  int k = (this->GetSize() + 1) / 2;
   recipient->CopyNFrom(this->array + this->GetSize() - k, k, buffer_pool_manager);
   this->IncreaseSize(-k);
 }
