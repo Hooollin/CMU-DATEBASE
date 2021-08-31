@@ -24,6 +24,9 @@ class IndexIterator {
  public:
   // you may define your own constructor based on your member variables
   IndexIterator();
+
+  IndexIterator(Page *left_most_page, int k, BufferPoolManager *buffer_pool_manager);
+
   ~IndexIterator();
 
   bool isEnd();
@@ -32,11 +35,14 @@ class IndexIterator {
 
   IndexIterator &operator++();
 
-  bool operator==(const IndexIterator &itr) const { throw std::runtime_error("unimplemented"); }
+  bool operator==(const IndexIterator &itr) const {return this->curr_page_ == itr.curr_page_ && this->k_ == itr.k_;}
 
-  bool operator!=(const IndexIterator &itr) const { throw std::runtime_error("unimplemented"); }
+  bool operator!=(const IndexIterator &itr) const {return !(this->curr_page_ == itr.curr_page_ && this->k_ == itr.k_); }
 
  private:
+  Page *curr_page_;
+  int k_;
+  BufferPoolManager *buffer_pool_manager_;
   // add your own private member variables here
 };
 

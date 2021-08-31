@@ -54,7 +54,7 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::KeyIndex(const KeyType &key, const KeyComparator
   int l = 0, r = this->GetSize() - 1;
   while (l < r) {
     int mid = (l + r) / 2;
-    if (comparator(key, this->array[mid].first) < 0) {
+    if (comparator(key, this->array[mid].first) > 0) {
       l = mid + 1;
     } else {
       r = mid;

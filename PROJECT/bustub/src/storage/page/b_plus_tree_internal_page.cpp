@@ -79,15 +79,15 @@ ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::ValueAt(int index) const { return this
  */
 INDEX_TEMPLATE_ARGUMENTS
 ValueType B_PLUS_TREE_INTERNAL_PAGE_TYPE::Lookup(const KeyType &key, const KeyComparator &comparator) const {
-  if(this->GetSize() == 1){
+  if (this->GetSize() == 1) {
     return this->ValueAt(0);
   }
   int ans = this->GetSize() - 1;
-  while(ans > 0){
+  while (ans > 0) {
     int cmp_result = comparator(key, this->KeyAt(ans));
-    if(cmp_result < 0){
+    if (cmp_result < 0) {
       ans--;
-    }else{
+    } else {
       break;
     }
   }
