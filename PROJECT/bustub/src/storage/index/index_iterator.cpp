@@ -23,7 +23,9 @@ INDEXITERATOR_TYPE::IndexIterator(Page *left_most_page, int k, BufferPoolManager
 
 INDEX_TEMPLATE_ARGUMENTS
 INDEXITERATOR_TYPE::~IndexIterator() {
-
+  if(this->curr_page_ != nullptr){
+    this->buffer_pool_manager_->UnpinPage(this->curr_page_->GetPageId());
+  }
 }
 
 INDEX_TEMPLATE_ARGUMENTS
@@ -41,8 +43,11 @@ INDEXITERATOR_TYPE &INDEXITERATOR_TYPE::operator++() {
   if (!isEnd()) {
     this->k_++;
     if (this->k_ == reinterpret_cast<B_PLUS_TREE_LEAF_PAGE_TYPE *>(this->curr_page_->GetData())->GetSize()) {
+
       page_id_t next_page =
           reinterpret_cast<B_PLUS_TREE_LEAF_PAGE_TYPE *>(this->curr_page_->GetData())->GetNextPageId();
+      // current page is no more needed in iteration
+      this->buffer_pool_manager_->UnpinPage(this->curr_page_->GetPageId());
       if (next_page != INVALID_PAGE_ID) {
         this->curr_page_ = this->buffer_pool_manager_->FetchPage(next_page);
       }else{
