@@ -287,7 +287,9 @@ bool BPLUSTREE_TYPE::AdjustRoot(BPlusTreePage *old_root_node) { return false; }
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE BPLUSTREE_TYPE::begin() { return INDEXITERATOR_TYPE(this->FindLeafPage(KeyType(), true), 0, this->buffer_pool_manager_); }
+INDEXITERATOR_TYPE BPLUSTREE_TYPE::begin() {
+  return INDEXITERATOR_TYPE(this->FindLeafPage(KeyType(), true), 0, this->buffer_pool_manager_);
+}
 
 /*
  * Input parameter is low key, find the leaf page that contains the input key
@@ -296,9 +298,9 @@ INDEXITERATOR_TYPE BPLUSTREE_TYPE::begin() { return INDEXITERATOR_TYPE(this->Fin
  */
 INDEX_TEMPLATE_ARGUMENTS
 INDEXITERATOR_TYPE BPLUSTREE_TYPE::Begin(const KeyType &key) {
-   Page* page = this->FindLeafPage(key, false);
-   int k = reinterpret_cast<LeafPage*>(page->GetData())->KeyIndex(key, this->comparator_);
-   return INDEXITERATOR_TYPE(page, k, this->buffer_pool_manager_);
+  Page *page = this->FindLeafPage(key, false);
+  int k = reinterpret_cast<LeafPage *>(page->GetData())->KeyIndex(key, this->comparator_);
+  return INDEXITERATOR_TYPE(page, k, this->buffer_pool_manager_);
 }
 
 /*
@@ -307,9 +309,7 @@ INDEXITERATOR_TYPE BPLUSTREE_TYPE::Begin(const KeyType &key) {
  * @return : index iterator
  */
 INDEX_TEMPLATE_ARGUMENTS
-INDEXITERATOR_TYPE BPLUSTREE_TYPE::end() {
-  return INDEXITERATOR_TYPE(nullptr, 0, this->buffer_pool_manager_);
-}
+INDEXITERATOR_TYPE BPLUSTREE_TYPE::end() { return INDEXITERATOR_TYPE(nullptr, 0, this->buffer_pool_manager_); }
 
 /*****************************************************************************
  * UTILITIES AND DEBUG
@@ -324,9 +324,9 @@ Page *BPLUSTREE_TYPE::FindLeafPage(const KeyType &key, bool leftMost) {
   while (curr_page_id != INVALID_PAGE_ID) {
     Page *curr_page = this->buffer_pool_manager_->FetchPage(curr_page_id);
     if (reinterpret_cast<BPlusTreePage *>(curr_page->GetData())->IsLeafPage()) {
-      if(leftMost){
+      if (leftMost) {
         return curr_page;
-      }else{
+      } else {
         ValueType val;
         if (reinterpret_cast<LeafPage *>(curr_page->GetData())->Lookup(key, &val, this->comparator_)) {
           return curr_page;

@@ -35,9 +35,11 @@ class IndexIterator {
 
   IndexIterator &operator++();
 
-  bool operator==(const IndexIterator &itr) const {return this->curr_page_ == itr.curr_page_ && this->k_ == itr.k_;}
+  bool operator==(const IndexIterator &itr) const { return this->curr_page_ == itr.curr_page_ && this->k_ == itr.k_; }
 
-  bool operator!=(const IndexIterator &itr) const {return !(this->curr_page_ == itr.curr_page_ && this->k_ == itr.k_); }
+  bool operator!=(const IndexIterator &itr) const {
+    return !(this->curr_page_ == itr.curr_page_ && this->k_ == itr.k_);
+  }
 
  private:
   Page *curr_page_;
