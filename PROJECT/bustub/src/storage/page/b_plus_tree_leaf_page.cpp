@@ -161,12 +161,14 @@ int B_PLUS_TREE_LEAF_PAGE_TYPE::RemoveAndDeleteRecord(const KeyType &key, const 
     if (comparator(key, this->array[i].first) == 0) {
       break;
     }
+    i++;
   }
   if (i == this->GetSize()) {
     return this->GetSize();
   }
   while (i < this->GetSize() - 1) {
     this->array[i] = this->array[i + 1];
+    i++;
   }
   this->IncreaseSize(-1);
   return this->GetSize();
