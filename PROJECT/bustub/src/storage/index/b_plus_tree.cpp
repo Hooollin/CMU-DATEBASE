@@ -232,17 +232,17 @@ void BPLUSTREE_TYPE::InsertIntoParent(BPlusTreePage *old_node, const KeyType &ke
  */
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
-  if(this->IsEmpty()){
+  if (this->IsEmpty()) {
     return;
   }
-  LeafPage* leaf_page = reinterpret_cast<LeafPage*>(FindLeafPage(key, false));
-  if(leaf_page == nullptr){
+  LeafPage *leaf_page = reinterpret_cast<LeafPage *>(FindLeafPage(key, false));
+  if (leaf_page == nullptr) {
     return;
   }
   int size_after_deletion = leaf_page->RemoveAndDeleteRecord(key, this->comparator_);
   // underflow happends
-  if(size_after_deletion < leaf_page->GetMinSize()){
-    if(CoalesceOrRedistribute(leaf_page, transaction)){
+  if (size_after_deletion < leaf_page->GetMinSize()) {
+    if (CoalesceOrRedistribute(leaf_page, transaction)) {
       this->buffer_pool_manager_->DeletePage(leaf_page->GetPageId());
     }
   }
@@ -258,37 +258,38 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
 INDEX_TEMPLATE_ARGUMENTS
 template <typename N>
 bool BPLUSTREE_TYPE::CoalesceOrRedistribute(N *node, Transaction *transaction) {
-  //std::cout << "coalesce Or Redistribute: " << node->GetPageId() << std::endl;
-  if(node->IsRootPage()){
+  // std::cout << "coalesce Or Redistribute: " << node->GetPageId() << std::endl;
+  if (node->IsRootPage()) {
     return this->AdjustRoot(node);
   }
   page_id_t parent_page_id = node->GetParentPageId();
-  InternalPage* parent_page = reinterpret_cast<InternalPage*>(this->buffer_pool_manager_->FetchPage(parent_page_id)->GetData());
+  InternalPage *parent_page =
+      reinterpret_cast<InternalPage *>(this->buffer_pool_manager_->FetchPage(parent_page_id)->GetData());
   int pos = parent_page->ValueIndex(node->GetPageId());
 
   page_id_t left_subling_id = INVALID_PAGE_ID, right_subling_id = INVALID_PAGE_ID;
   N *left_subling_page = nullptr, *right_subling_page = nullptr;
 
-  if(pos - 1 >= 0){
+  if (pos - 1 >= 0) {
     left_subling_id = parent_page->ValueAt(pos - 1);
-    left_subling_page = reinterpret_cast<N*>(this->buffer_pool_manager_->FetchPage(left_subling_id)->GetData());
+    left_subling_page = reinterpret_cast<N *>(this->buffer_pool_manager_->FetchPage(left_subling_id)->GetData());
   }
-  if(pos + 1 < parent_page->GetSize()){
+  if (pos + 1 < parent_page->GetSize()) {
     right_subling_id = parent_page->ValueAt(pos + 1);
-    right_subling_page = reinterpret_cast<N*>(this->buffer_pool_manager_->FetchPage(right_subling_id)->GetData());
+    right_subling_page = reinterpret_cast<N *>(this->buffer_pool_manager_->FetchPage(right_subling_id)->GetData());
   }
 
   N *to_coalesce_subling_page = nullptr;
-  if(left_subling_page != nullptr){
-    if(left_subling_page->GetSize() + node->GetSize() > node->GetMaxSize()){
+  if (left_subling_page != nullptr) {
+    if (left_subling_page->GetSize() + node->GetSize() > node->GetMaxSize()) {
       this->Redistribute(left_subling_page, node, 1);
       this->buffer_pool_manager_->UnpinPage(left_subling_id, true);
       this->buffer_pool_manager_->UnpinPage(node->GetPageId(), true);
       return false;
     }
     to_coalesce_subling_page = left_subling_page;
-  }else if(right_subling_page != nullptr){
-    if(right_subling_page->GetSize() + node->GetSize() > node->GetMaxSize()){
+  } else if (right_subling_page != nullptr) {
+    if (right_subling_page->GetSize() + node->GetSize() > node->GetMaxSize()) {
       this->Redistribute(right_subling_page, node, 0);
       this->buffer_pool_manager_->UnpinPage(right_subling_id, true);
       this->buffer_pool_manager_->UnpinPage(node->GetPageId(), true);
@@ -296,16 +297,16 @@ bool BPLUSTREE_TYPE::CoalesceOrRedistribute(N *node, Transaction *transaction) {
     }
     to_coalesce_subling_page = right_subling_page;
   }
-  if(this->Coalesce(&to_coalesce_subling_page, &node, &parent_page, pos, transaction)){
+  if (this->Coalesce(&to_coalesce_subling_page, &node, &parent_page, pos, transaction)) {
     this->buffer_pool_manager_->DeletePage(parent_page_id);
   }
   // coalesce happened, unpin used pages
-  if(to_coalesce_subling_page == left_subling_page){
-    if(left_subling_id != INVALID_PAGE_ID){
+  if (to_coalesce_subling_page == left_subling_page) {
+    if (left_subling_id != INVALID_PAGE_ID) {
       this->buffer_pool_manager_->UnpinPage(left_subling_id, true);
     }
-  }else{
-    if(right_subling_id != INVALID_PAGE_ID){
+  } else {
+    if (right_subling_id != INVALID_PAGE_ID) {
       this->buffer_pool_manager_->UnpinPage(right_subling_id, true);
     }
   }
@@ -330,15 +331,15 @@ template <typename N>
 bool BPLUSTREE_TYPE::Coalesce(N **neighbor_node, N **node,
                               BPlusTreeInternalPage<KeyType, page_id_t, KeyComparator> **parent, int index,
                               Transaction *transaction) {
-  if((*node)->IsLeafPage()){
-    LeafPage *n = reinterpret_cast<LeafPage*>(*node), *nn = reinterpret_cast<LeafPage*>(*neighbor_node);
+  if ((*node)->IsLeafPage()) {
+    LeafPage *n = reinterpret_cast<LeafPage *>(*node), *nn = reinterpret_cast<LeafPage *>(*neighbor_node);
     n->MoveAllTo(nn);
-  }else{
-    InternalPage *n = reinterpret_cast<InternalPage*>(*node), *nn = reinterpret_cast<InternalPage*>(*neighbor_node);
+  } else {
+    InternalPage *n = reinterpret_cast<InternalPage *>(*node), *nn = reinterpret_cast<InternalPage *>(*neighbor_node);
     n->MoveAllTo(nn, (*parent)->KeyAt(index), this->buffer_pool_manager_);
   }
   (*parent)->Remove(index);
-  if((*parent)->GetSize() < (*parent)->GetMinSize()){
+  if ((*parent)->GetSize() < (*parent)->GetMinSize()) {
     return CoalesceOrRedistribute(*parent, transaction);
   }
   return false;
@@ -356,26 +357,33 @@ bool BPLUSTREE_TYPE::Coalesce(N **neighbor_node, N **node,
 INDEX_TEMPLATE_ARGUMENTS
 template <typename N>
 void BPLUSTREE_TYPE::Redistribute(N *neighbor_node, N *node, int index) {
-  if(index == 0){
-    InternalPage* parent_page = reinterpret_cast<InternalPage*>(this->buffer_pool_manager_->FetchPage(neighbor_node->GetParentPageId())->GetData());
+  if (index == 0) {
+    InternalPage *parent_page = reinterpret_cast<InternalPage *>(
+        this->buffer_pool_manager_->FetchPage(neighbor_node->GetParentPageId())->GetData());
     int pos = parent_page->ValueIndex(neighbor_node->GetPageId());
-    if(node->IsLeafPage()){
-      reinterpret_cast<LeafPage*>(neighbor_node)->MoveFirstToEndOf(reinterpret_cast<LeafPage*>(node));
-      parent_page->SetKeyAt(pos, reinterpret_cast<LeafPage*>(neighbor_node)->KeyAt(0));
-    }else{
-      reinterpret_cast<InternalPage*>(neighbor_node)->MoveFirstToEndOf(reinterpret_cast<InternalPage*>(node), parent_page->KeyAt(pos), this->buffer_pool_manager_);
-      parent_page->SetKeyAt(pos, reinterpret_cast<InternalPage*>(neighbor_node)->KeyAt(1));
+    if (node->IsLeafPage()) {
+      reinterpret_cast<LeafPage *>(neighbor_node)->MoveFirstToEndOf(reinterpret_cast<LeafPage *>(node));
+      parent_page->SetKeyAt(pos, reinterpret_cast<LeafPage *>(neighbor_node)->KeyAt(0));
+    } else {
+      reinterpret_cast<InternalPage *>(neighbor_node)
+          ->MoveFirstToEndOf(reinterpret_cast<InternalPage *>(node), parent_page->KeyAt(pos),
+                             this->buffer_pool_manager_);
+      parent_page->SetKeyAt(pos, reinterpret_cast<InternalPage *>(neighbor_node)->KeyAt(1));
     }
     this->buffer_pool_manager_->UnpinPage(parent_page->GetPageId(), true);
-  }else{
-    InternalPage* parent_page = reinterpret_cast<InternalPage*>(this->buffer_pool_manager_->FetchPage(node->GetParentPageId())->GetData());
+  } else {
+    InternalPage *parent_page =
+        reinterpret_cast<InternalPage *>(this->buffer_pool_manager_->FetchPage(node->GetParentPageId())->GetData());
     int pos = parent_page->ValueIndex(node->GetPageId());
-    if(node->IsLeafPage()){
-      reinterpret_cast<LeafPage*>(neighbor_node)->MoveLastToFrontOf(reinterpret_cast<LeafPage*>(node));
-      parent_page->SetKeyAt(pos, reinterpret_cast<LeafPage*>(node)->KeyAt(0));
-    }else{
-      reinterpret_cast<InternalPage*>(neighbor_node)->MoveLastToFrontOf(reinterpret_cast<InternalPage*>(node), parent_page->KeyAt(parent_page->ValueIndex(node->GetPageId())), this->buffer_pool_manager_);
-      parent_page->SetKeyAt(pos, reinterpret_cast<InternalPage*>(node)->KeyAt(1));
+    if (node->IsLeafPage()) {
+      reinterpret_cast<LeafPage *>(neighbor_node)->MoveLastToFrontOf(reinterpret_cast<LeafPage *>(node));
+      parent_page->SetKeyAt(pos, reinterpret_cast<LeafPage *>(node)->KeyAt(0));
+    } else {
+      reinterpret_cast<InternalPage *>(neighbor_node)
+          ->MoveLastToFrontOf(reinterpret_cast<InternalPage *>(node),
+                              parent_page->KeyAt(parent_page->ValueIndex(node->GetPageId())),
+                              this->buffer_pool_manager_);
+      parent_page->SetKeyAt(pos, reinterpret_cast<InternalPage *>(node)->KeyAt(1));
     }
     this->buffer_pool_manager_->UnpinPage(parent_page->GetPageId(), true);
   }
@@ -392,20 +400,21 @@ void BPLUSTREE_TYPE::Redistribute(N *neighbor_node, N *node, int index) {
  */
 INDEX_TEMPLATE_ARGUMENTS
 bool BPLUSTREE_TYPE::AdjustRoot(BPlusTreePage *old_root_node) {
-  if(old_root_node->IsLeafPage()){
-    if(old_root_node->GetSize() == 0){
+  if (old_root_node->IsLeafPage()) {
+    if (old_root_node->GetSize() == 0) {
       this->root_page_id_ = INVALID_PAGE_ID;
       UpdateRootPageId(0);
       return true;
     }
     return false;
-  }else{
-    if(old_root_node->GetSize() > 1){
+  } else {
+    if (old_root_node->GetSize() > 1) {
       return false;
     }
-    page_id_t new_page_id = reinterpret_cast<InternalPage*>(old_root_node)->RemoveAndReturnOnlyChild();
+    page_id_t new_page_id = reinterpret_cast<InternalPage *>(old_root_node)->RemoveAndReturnOnlyChild();
     this->root_page_id_ = new_page_id;
-    reinterpret_cast<BPlusTreePage*>(this->buffer_pool_manager_->FetchPage(new_page_id))->SetParentPageId(INVALID_PAGE_ID);
+    reinterpret_cast<BPlusTreePage *>(this->buffer_pool_manager_->FetchPage(new_page_id))
+        ->SetParentPageId(INVALID_PAGE_ID);
     UpdateRootPageId(0);
     return true;
   }
