@@ -42,22 +42,16 @@ bool BPLUSTREE_TYPE::IsEmpty() const { return this->root_page_id_ == INVALID_PAG
  */
 INDEX_TEMPLATE_ARGUMENTS
 bool BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) {
-  page_id_t page_id = this->root_page_id_;
-  while (page_id != INVALID_PAGE_ID) {
-    BPlusTreePage *tree_page =
-        reinterpret_cast<BPlusTreePage *>(this->buffer_pool_manager_->FetchPage(page_id)->GetData());
-    if (tree_page->IsLeafPage()) {
-      ValueType value;
-      if (reinterpret_cast<LeafPage *>(tree_page)->Lookup(key, &value, this->comparator_)) {
-        result->push_back(value);
-        this->buffer_pool_manager_->UnpinPage(tree_page->GetPageId(), false);
-        return true;
-      } else {
-        break;
-      }
-    } else {
-      page_id = reinterpret_cast<InternalPage *>(tree_page)->Lookup(key, this->comparator_);
-      this->buffer_pool_manager_->UnpinPage(tree_page->GetPageId(), false);
+  this->rwlatch_.RLock();
+  Page* target_page = FindLeafPage(key, false);
+  if(target_page != nullptr){
+    ValueType val;
+    if(reinterpret_cast<LeafPage*>(target_page->GetData())->Lookup(key, &val, this->comparator_)){
+      result->push_back(val);
+      this->rwlatch_.RUnlock();
+      return true;
+    }else{
+      this->rwlatch_.RUnlock();
     }
   }
   return false;
@@ -75,11 +69,15 @@ bool BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result
  */
 INDEX_TEMPLATE_ARGUMENTS
 bool BPLUSTREE_TYPE::Insert(const KeyType &key, const ValueType &value, Transaction *transaction) {
+  this->rwlatch_.WLock();
   if (this->IsEmpty()) {
     this->StartNewTree(key, value);
+    this->rwlatch_.WUnlock();
     return true;
   } else {
-    return this->InsertIntoLeaf(key, value, transaction);
+    bool rev = this->InsertIntoLeaf(key, value, transaction);
+    this->rwlatch_.WUnlock();
+    return rev;
   }
 }
 /*
@@ -232,11 +230,13 @@ void BPLUSTREE_TYPE::InsertIntoParent(BPlusTreePage *old_node, const KeyType &ke
  */
 INDEX_TEMPLATE_ARGUMENTS
 void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
+  this->rwlatch_.WLock();
   if (this->IsEmpty()) {
     return;
   }
   LeafPage *leaf_page = reinterpret_cast<LeafPage *>(FindLeafPage(key, false));
   if (leaf_page == nullptr) {
+    this->rwlatch_.WUnlock();
     return;
   }
   int size_after_deletion = leaf_page->RemoveAndDeleteRecord(key, this->comparator_);
@@ -246,6 +246,7 @@ void BPLUSTREE_TYPE::Remove(const KeyType &key, Transaction *transaction) {
       this->buffer_pool_manager_->DeletePage(leaf_page->GetPageId());
     }
   }
+  this->rwlatch_.WUnlock();
 }
 
 /*
@@ -482,6 +483,8 @@ Page *BPLUSTREE_TYPE::FindLeafPage(const KeyType &key, bool leftMost) {
       } else {
         curr_page_id = reinterpret_cast<InternalPage *>(curr_page->GetData())->Lookup(key, this->comparator_);
       }
+      this->rwlatch_.RUnlock();
+      this->buffer_pool_manager_->UnpinPage(curr_page->GetPageId(), false);
     }
   }
   return nullptr;
