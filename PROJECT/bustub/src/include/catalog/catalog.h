@@ -77,10 +77,10 @@ class Catalog {
    */
   TableMetadata *CreateTable(Transaction *txn, const std::string &table_name, const Schema &schema) {
     BUSTUB_ASSERT(names_.count(table_name) == 0, "Table names should be unique!");
-    TableMetadata *metadata = new TableMetadata(schema, 
-      table_name, 
-      std::unique_ptr<TableHeap>(new TableHeap(this->bpm_, this->lock_manager_, this->log_manager_, txn)), 
-      this->next_table_oid_);
+    TableMetadata *metadata = new TableMetadata(
+        schema, table_name,
+        std::unique_ptr<TableHeap>(new TableHeap(this->bpm_, this->lock_manager_, this->log_manager_, txn)),
+        this->next_table_oid_);
     this->names_[table_name] = this->next_table_oid_;
     this->tables_[this->next_table_oid_] = std::unique_ptr<TableMetadata>(metadata);
     this->next_table_oid_++;
@@ -89,7 +89,7 @@ class Catalog {
 
   /** @return table metadata by name */
   TableMetadata *GetTable(const std::string &table_name) {
-    if(this->names_.find(table_name) == this->names_.end()){
+    if (this->names_.find(table_name) == this->names_.end()) {
       throw std::out_of_range("Table doesn't exist!");
     }
     return this->tables_[this->names_[table_name]].get();
@@ -97,7 +97,7 @@ class Catalog {
 
   /** @return table metadata by oid */
   TableMetadata *GetTable(table_oid_t table_oid) {
-    if(this->tables_.find(table_oid) == this->tables_.end()){
+    if (this->tables_.find(table_oid) == this->tables_.end()) {
       throw std::out_of_range("Table doesn't exist!");
     }
     return this->tables_[table_oid].get();
@@ -118,12 +118,27 @@ class Catalog {
   IndexInfo *CreateIndex(Transaction *txn, const std::string &index_name, const std::string &table_name,
                          const Schema &schema, const Schema &key_schema, const std::vector<uint32_t> &key_attrs,
                          size_t keysize) {
-    return nullptr;
+    IndexMetadata *metadata = new IndexMetadata(index_name, table_name, &schema, key_attrs);
+    Index *index = new BPlusTreeIndex<KeyType, ValueType, KeyComparator>(metadata, this->bpm_);
+    IndexInfo *info = new IndexInfo(key_schema, index_name, std::unique_ptr<Index>(index), this->next_index_oid_,
+                                    table_name, keysize);
+    this->indexes_[this->next_index_oid_] = std::unique_ptr<IndexInfo>(info);
+    this->index_names_[table_name][index_name] = this->next_index_oid_;
+    this->next_index_oid_++;
+    return info;
   }
 
-  IndexInfo *GetIndex(const std::string &index_name, const std::string &table_name) { return nullptr; }
+  IndexInfo *GetIndex(const std::string &index_name, const std::string &table_name) {
+    if (this->index_names_.find(table_name) == this->index_names_.end()) {
+      throw new std::out_of_range(table_name + " doesn't exist!");
+    }
+    if (this->index_names_[table_name].find(index_name) == this->index_names_[table_name].end()) {
+      throw new std::out_of_range(table_name + " doesn't exist!");
+    }
+    return this->indexes_[this->index_names_[table_name][index_name]].get();
+  }
 
-  IndexInfo *GetIndex(index_oid_t index_oid) { return nullptr; }
+  IndexInfo *GetIndex(index_oid_t index_oid) { return this->indexes_[index_oid].get(); }
 
   std::vector<IndexInfo *> GetTableIndexes(const std::string &table_name) { return std::vector<IndexInfo *>(); }
 

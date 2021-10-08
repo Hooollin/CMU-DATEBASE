@@ -43,14 +43,14 @@ bool BPLUSTREE_TYPE::IsEmpty() const { return this->root_page_id_ == INVALID_PAG
 INDEX_TEMPLATE_ARGUMENTS
 bool BPLUSTREE_TYPE::GetValue(const KeyType &key, std::vector<ValueType> *result, Transaction *transaction) {
   this->rwlatch_.RLock();
-  Page* target_page = FindLeafPage(key, false);
-  if(target_page != nullptr){
+  Page *target_page = FindLeafPage(key, false);
+  if (target_page != nullptr) {
     ValueType val;
-    if(reinterpret_cast<LeafPage*>(target_page->GetData())->Lookup(key, &val, this->comparator_)){
+    if (reinterpret_cast<LeafPage *>(target_page->GetData())->Lookup(key, &val, this->comparator_)) {
       result->push_back(val);
       this->rwlatch_.RUnlock();
       return true;
-    }else{
+    } else {
       this->rwlatch_.RUnlock();
     }
   }
