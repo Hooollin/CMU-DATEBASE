@@ -77,14 +77,31 @@ class Catalog {
    */
   TableMetadata *CreateTable(Transaction *txn, const std::string &table_name, const Schema &schema) {
     BUSTUB_ASSERT(names_.count(table_name) == 0, "Table names should be unique!");
-    return nullptr;
+    TableMetadata *metadata = new TableMetadata(schema, 
+      table_name, 
+      std::unique_ptr<TableHeap>(new TableHeap(this->bpm_, this->lock_manager_, this->log_manager_, txn)), 
+      this->next_table_oid_);
+    this->names_[table_name] = this->next_table_oid_;
+    this->tables_[this->next_table_oid_] = std::unique_ptr<TableMetadata>(metadata);
+    this->next_table_oid_++;
+    return metadata;
   }
 
   /** @return table metadata by name */
-  TableMetadata *GetTable(const std::string &table_name) { return nullptr; }
+  TableMetadata *GetTable(const std::string &table_name) {
+    if(this->names_.find(table_name) == this->names_.end()){
+      throw std::out_of_range("Table doesn't exist!");
+    }
+    return this->tables_[this->names_[table_name]].get();
+  }
 
   /** @return table metadata by oid */
-  TableMetadata *GetTable(table_oid_t table_oid) { return nullptr; }
+  TableMetadata *GetTable(table_oid_t table_oid) {
+    if(this->tables_.find(table_oid) == this->tables_.end()){
+      throw std::out_of_range("Table doesn't exist!");
+    }
+    return this->tables_[table_oid].get();
+  }
 
   /**
    * Create a new index, populate existing data of the table and return its metadata.
