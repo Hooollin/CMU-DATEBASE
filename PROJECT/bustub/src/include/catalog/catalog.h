@@ -140,7 +140,15 @@ class Catalog {
 
   IndexInfo *GetIndex(index_oid_t index_oid) { return this->indexes_[index_oid].get(); }
 
-  std::vector<IndexInfo *> GetTableIndexes(const std::string &table_name) { return std::vector<IndexInfo *>(); }
+  std::vector<IndexInfo *> GetTableIndexes(const std::string &table_name) {
+    std::vector<IndexInfo *> indexes;
+    for (auto &p : this->index_names_[table_name]) {
+      std::string index_name = p.first;
+      index_oid_t index_id = p.second;
+      indexes.push_back(this->indexes_[index_id].get());
+    }
+    return indexes;
+  }
 
  private:
   [[maybe_unused]] BufferPoolManager *bpm_;

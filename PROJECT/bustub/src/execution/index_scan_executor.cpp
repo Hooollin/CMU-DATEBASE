@@ -29,11 +29,17 @@ bool IndexScanExecutor::Next(Tuple *tuple, RID *rid) {
     Tuple this_one{p.second};
     *tuple = this_one;
     *rid = p.second;
-    if (this->plan_->GetPredicate()->Evaluate(tuple, this->GetOutputSchema()).GetAs<bool>()) {
+    if (this->plan_->GetPredicate() != nullptr) {
+      if (this->plan_->GetPredicate()->Evaluate(tuple, this->GetOutputSchema()).GetAs<bool>()) {
+        ++this->it_;
+        return true;
+      } else {
+        ++this->it_;
+      }
+    } else {
       ++this->it_;
       return true;
     }
-    ++this->it_;
   }
   return false;
 }
