@@ -17,10 +17,43 @@ namespace bustub {
 
 InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {}
+    : AbstractExecutor(exec_ctx) {
+  this->plan_ = plan;
+  this->child_executor_ = child_executor.get();
+}
 
-void InsertExecutor::Init() {}
+void InsertExecutor::Init() {
+  this->target_table_ = this->exec_ctx_->GetCatalog()->GetTable(this->plan_->TableOid())->table_.get();
+  this->target_table_metadata_ = this->exec_ctx_->GetCatalog()->GetTable(this->plan_->TableOid());
 
-bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) { return false; }
+  if (this->plan_->IsRawInsert()) {
+    this->it_ = this->plan_->RawValues().begin();
+    this->it_begin_ = this->plan_->RawValues().begin();
+    this->it_end_ = this->plan_->RawValues().end();
+  }
+}
+
+bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  Tuple to_insert_tuple;
+  RID to_insert_rid;
+  if (this->plan_->IsRawInsert()) {
+    if (this->it_ != this->it_end_) {
+      Tuple to_insert_tuple{*this->it_, &this->target_table_metadata_->schema_};
+      to_insert_rid = to_insert_tuple.GetRid();
+      if (this->target_table_->InsertTuple(to_insert_tuple, rid, this->exec_ctx_->GetTransaction())) {
+        this->it_++;
+        return true;
+      }
+    }
+    return false;
+  } else {
+    if (child_executor_->Next(&to_insert_tuple, &to_insert_rid)) {
+      if (this->target_table_->InsertTuple(to_insert_tuple, &to_insert_rid, this->exec_ctx_->GetTransaction())) {
+        return true;
+      }
+    }
+    return false;
+  }
+}
 
 }  // namespace bustub

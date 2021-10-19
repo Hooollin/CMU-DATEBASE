@@ -30,11 +30,16 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   while (this->it_ != this->it_end_) {
     *tuple = *this->it_;
     *rid = this->it_->GetRid();
-    if (this->plan_->GetPredicate()->Evaluate(tuple, this->GetOutputSchema()).GetAs<bool>()) {
+    if (this->plan_->GetPredicate() == nullptr) {
       ++this->it_;
       return true;
+    } else {
+      if (this->plan_->GetPredicate()->Evaluate(tuple, this->GetOutputSchema()).GetAs<bool>()) {
+        ++this->it_;
+        return true;
+      } else
+        ++this->it_;
     }
-    ++this->it_;
   }
   return false;
 }
