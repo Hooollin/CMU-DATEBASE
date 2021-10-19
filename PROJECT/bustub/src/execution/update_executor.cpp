@@ -28,12 +28,16 @@ void UpdateExecutor::Init() {
 }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
-  if(this->child_executor_->Next(tuple, rid)){
+  if (this->child_executor_->Next(tuple, rid)) {
     Tuple updated_tuple = this->GenerateUpdatedTuple(*tuple);
     this->table_info_->table_->UpdateTuple(updated_tuple, updated_tuple.GetRid(), this->exec_ctx_->GetTransaction());
-    for(auto &index_info : this->exec_ctx_->GetCatalog()->GetTableIndexes(this->table_info_->name_)){
-      index_info->index_->DeleteEntry(tuple->KeyFromTuple(this->table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()), *rid, this->exec_ctx_->GetTransaction());
-      index_info->index_->InsertEntry(updated_tuple.KeyFromTuple(this->table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()), updated_tuple.GetRid(), this->exec_ctx_->GetTransaction());
+    for (auto &index_info : this->exec_ctx_->GetCatalog()->GetTableIndexes(this->table_info_->name_)) {
+      index_info->index_->DeleteEntry(
+          tuple->KeyFromTuple(this->table_info_->schema_, index_info->key_schema_, index_info->index_->GetKeyAttrs()),
+          *rid, this->exec_ctx_->GetTransaction());
+      index_info->index_->InsertEntry(updated_tuple.KeyFromTuple(this->table_info_->schema_, index_info->key_schema_,
+                                                                 index_info->index_->GetKeyAttrs()),
+                                      updated_tuple.GetRid(), this->exec_ctx_->GetTransaction());
     }
     return true;
   }
