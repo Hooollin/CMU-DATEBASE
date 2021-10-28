@@ -17,10 +17,32 @@ namespace bustub {
 NestedLoopJoinExecutor::NestedLoopJoinExecutor(ExecutorContext *exec_ctx, const NestedLoopJoinPlanNode *plan,
                                                std::unique_ptr<AbstractExecutor> &&left_executor,
                                                std::unique_ptr<AbstractExecutor> &&right_executor)
-    : AbstractExecutor(exec_ctx) {}
+    : AbstractExecutor(exec_ctx) {
+        this->exec_ctx_ = exec_ctx;
+        this->plan_ = plan;
+        this->left_executor_ = std::move(left_executor);
+        this->right_executor_ = std::move(right_executor);
+    }
 
-void NestedLoopJoinExecutor::Init() {}
+void NestedLoopJoinExecutor::Init() {
+    this->left_executor_.get()->Init();
+}
 
-bool NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) { return false; }
+bool NestedLoopJoinExecutor::Next(Tuple *tuple, RID *rid) {
+    Tuple left_tuple, right_tuple;
+    RID left_tuple_rid, right_tuple_rid;
+    while(this->left_executor_->Next(&left_tuple, &left_tuple_rid)){
+        this->right_executor_.get()->Init();
+        while(this->right_executor_->Next(&right_tuple, &right_tuple_rid)){
+          if (this->plan_->Predicate()->EvaluateJoin(&left_tuple, this->plan_->GetLeftPlan()->OutputSchema(),
+                                                     &right_tuple, this->plan_->GetRightPlan()->OutputSchema()).GetAs<bool>()){
+            *tuple = left_tuple;
+            *rid = left_tuple_rid;
+            return true;
+          }
+        }
+    }
+    return false;
+}
 
 }  // namespace bustub
